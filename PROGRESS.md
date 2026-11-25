@@ -26,14 +26,13 @@ Requirements: `docs/SPEC.md`.
 - **Production builds** (`pnpm build`) pass; `pnpm dev` verified (both apps up, proxy + guard work).
 - **`prisma/explain.ts`** (`db:explain`) prints EXPLAIN plans; results documented in ARCHITECTURE.md.
 - **Docs:** README, BRD, PRD, ARCHITECTURE, ERD, API, TEST_PLAN, ADR 0001–0003, screenshots in `docs/screenshots/`.
-- **CI:** `.github/workflows/ci.yml` (quality / integration with MySQL service / E2E). Not yet run on GitHub — remote URL pending.
-- Initial git commit includes the implementation, tests, documentation, and CI workflow.
+- **CI:** `.github/workflows/ci.yml` (quality / integration with MySQL service / E2E). All three jobs passed on GitHub for initial commit `ad7f6b1`: [CI run #1](https://github.com/arvardy184/cargoflow/actions/runs/45638794018).
+- Initial git commit `ad7f6b1` includes the implementation, tests, documentation, and CI workflow; pushed to `main` at [arvardy184/cargoflow](https://github.com/arvardy184/cargoflow).
 
 ## Next
 
-1. Configure the GitHub remote, push the initial commit, then confirm the CI workflow passes there.
-2. Optional hardening (see README "Limitations"): `(status, createdAt)` index, generated-column unique index for active container, CSP, CSRF token, axe checks in CI.
-3. Laravel quotation module — deferred unless PHP becomes available (none installed locally).
+1. Optional hardening (see README "Limitations"): `(status, createdAt)` index, generated-column unique index for active container, CSP, CSRF token, axe checks in CI.
+2. Laravel quotation module — deferred unless PHP becomes available (none installed locally).
 
 ## Decisions
 
@@ -59,7 +58,7 @@ Requirements: `docs/SPEC.md`.
 ## Environment notes
 
 - Running Docker commands from Claude Code has repeatedly crashed the session. Start Docker Desktop and run `docker compose up -d mysql` manually before a session.
-- GitHub remote URL has not been configured; push and CI verification are pending.
+- GitHub remote `origin`: `https://github.com/arvardy184/cargoflow.git`; local `main` tracks `origin/main`.
 - Windows: stopping a background `pnpm start`/`pnpm dev` task leaves the child `node` process holding ports 3000/4000. Free them with `netstat -ano | findstr :3000` + `taskkill /PID <pid> /T /F` before rebuilding `.next`.
 - E2E needs Chromium once: `pnpm --filter @cargoflow/web exec playwright install chromium`. E2E creates data in the dev DB; re-run `db:seed` to reset.
 
