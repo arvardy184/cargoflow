@@ -1,0 +1,147 @@
+// CargoFlow relational schema (MySQL 8).
+// All DateTime values are persisted in UTC (Prisma writes UTC; the MySQL server runs at +00:00).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATIONS
+}
+
+enum ShipmentStatus {
+  DRAFT
+  BOOKED
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum ContainerType {
+  DRY_20
+  DRY_40
+  HIGH_CUBE_40
+  REEFER_20
+  REEFER_40
+}
+
+enum AuditEntityType {
+  SHIPMENT
+  CUSTOMER
+  CONTAINER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  STATUS_CHANGE
+}
+
+model User {
+  id           String   @id @default(cuid()) @db.VarChar(30)
+  fullName     String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(191)
+  passwordHash String   @db.VarChar(100)
+  role         Role
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @db.DateTime(3)
+
+  shipmentsCreated Shipment[]      @relation("ShipmentCreatedBy")
+  shipmentEvents   ShipmentEvent[]
+  auditLogs        AuditLog[]
+}
+
+model Customer {
+  id            String   @id @default(cuid()) @db.VarChar(30)
+  companyName   String   @unique @db.VarChar(150)
+  contactPerson String   @db.VarChar(120)
+  email         String   @db.VarChar(191)
+  phone         String   @db.VarChar(30)
+  createdAt     DateTime @default(now()) @db.DateTime(3)
+  updatedAt     DateTime @updatedAt @db.DateTime(3)
+
+  shipments Shipment[]
+}
+
+model Container {
+  id              String        @id @default(cuid()) @db.VarChar(30)
+  containerNumber String        @unique @db.VarChar(11)
+  containerType   ContainerType
+  createdAt       DateTime      @default(now()) @db.DateTime(3)
+  updatedAt       DateTime      @updatedAt @db.DateTime(3)
+
+  shipments Shipment[]
+}
+
+model Shipment {
+  id                  String         @id @default(cuid()) @db.VarChar(30)
+  shipmentNumber      String         @unique @db.VarChar(20)
+  customerId          String         @db.VarChar(30)
+  containerId         String         @db.VarChar(30)
+  origin              String         @db.VarChar(100)
+  destination         String         @db.VarChar(100)
+  estimatedDeliveryAt DateTime       @db.DateTime(3)
+  actualDeliveryAt    DateTime?      @db.DateTime(3)
+  status              ShipmentStatus @default(DRAFT)
+  notes               String?        @db.VarChar(1000)
+  createdById         String         @db.VarChar(30)
+  createdAt           DateTime       @default(now()) @db.DateTime(3)
+  updatedAt           DateTime       @updatedAt @db.DateTime(3)
+
+  customer  Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  container Container       @relation(fields: [containerId], references: [id], onDelete: Restrict)
+  createdBy User            @relation("ShipmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  events    ShipmentEvent[]
+
+  // Overdue filter and dashboard aggregation: WHERE status <> 'DELIVERED' AND estimatedDeliveryAt < NOW()
+  @@index([status, estimatedDeliveryAt])
+  @@index([customerId, createdAt])
+  @@index([containerId, status])
+  @@index([createdAt])
+  @@index([estimatedDeliveryAt])
+}
+
+model ShipmentEvent {
+  id             String          @id @default(cuid()) @db.VarChar(30)
+  shipmentId     String          @db.VarChar(30)
+  previousStatus ShipmentStatus?
+  newStatus      ShipmentStatus
+  changedById    String          @db.VarChar(30)
+  remarks        String?         @db.VarChar(500)
+  createdAt      DateTime        @default(now()) @db.DateTime(3)
+
+  shipment  Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  changedBy User     @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([shipmentId, createdAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String          @id @default(cuid()) @db.VarChar(30)
+  actorId    String          @db.VarChar(30)
+  entityType AuditEntityType
+  entityId   String          @db.VarChar(30)
+  action     AuditAction
+  beforeData Json?
+  afterData  Json?
+  createdAt  DateTime        @default(now()) @db.DateTime(3)
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// Gap-free, human-readable shipment numbers (CF-2026-00001). One row per sequence
+// name (e.g. "shipment-2026"); incremented atomically inside the create transaction.
+model SequenceCounter {
+  name  String @id @db.VarChar(50)
+  value Int
+}

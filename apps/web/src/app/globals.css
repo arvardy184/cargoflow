@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+/*
+ * CargoFlow tokens. Cool paper background, ink-navy chrome, harbor-blue actions.
+ * Status colours carry meaning and are used consistently in badges, the lifecycle rail and the
+ * dashboard pipeline bar.
+ */
+@theme {
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0f2342;
+  --color-ink-soft: #33435c;
+  --color-muted: #5b6b82;
+  --color-paper: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-line: #d9dfe7;
+  --color-line-soft: #e9edf2;
+
+  --color-harbor: #1d5fd1;
+  --color-harbor-dark: #174ca8;
+  --color-harbor-tint: #e8f0fc;
+
+  /* Validated with the dataviz palette checker on #fff: lightness, CVD (worst ΔE 16.6),
+     normal-vision (ΔE 18.9) and 3:1 contrast pass. Draft is deliberately neutral (low chroma)
+     and always ships with a text label. */
+  --color-status-draft: #64748b;
+  --color-status-booked: #1d4ed8;
+  --color-status-transit: #0891b2;
+  --color-status-transit-ink: #155e75;
+  --color-status-delivered: #166534;
+  --color-danger: #b91c1c;
+  --color-danger-tint: #fdecec;
+  --color-warning: #a35207;
+  --color-warning-tint: #fdf3e7;
+  --color-success-tint: #e8f5ec;
+
+  --radius-control: 6px;
+  --radius-panel: 8px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: 'kern';
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-harbor);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}

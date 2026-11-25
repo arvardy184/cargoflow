@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+apps/api/prisma/migrations
+apps/web/test-results
+apps/web/playwright-report
+apps/web/next-env.d.ts
+# Requirements source, kept exactly as provided
+docs/SPEC.md

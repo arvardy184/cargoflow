@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # CI-only throwaway values. Never reuse these anywhere else.
+  JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0123456789
+  SEED_DEMO_PASSWORD: CargoFlow!2026
+  WEB_ORIGIN: http://localhost:3000
+
+jobs:
+  quality:
+    name: Format, lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    env:
+      # Needed by `prisma generate` and config loading; no database is contacted in this job.
+      DATABASE_URL: mysql://ci:ci@localhost:3306/unused
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  integration:
+    name: API integration tests (MySQL)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: cargoflow_test
+          MYSQL_USER: cargoflow
+          MYSQL_PASSWORD: cargoflow_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      DATABASE_URL: mysql://cargoflow:cargoflow_ci@127.0.0.1:3306/cargoflow_test
+      TEST_DATABASE_URL: mysql://cargoflow:cargoflow_ci@127.0.0.1:3306/cargoflow_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Migrations are applied by the suite's global setup (refuses databases not ending in _test).
+      - run: pnpm test:integration
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: cargoflow
+          MYSQL_USER: cargoflow
+          MYSQL_PASSWORD: cargoflow_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      DATABASE_URL: mysql://cargoflow:cargoflow_ci@127.0.0.1:3306/cargoflow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @cargoflow/api db:deploy
+      - run: pnpm --filter @cargoflow/api db:seed
+      - run: pnpm build
+      - run: pnpm --filter @cargoflow/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7

@@ -1,0 +1,30 @@
+{
+  "name": "cargoflow",
+  "private": true,
+  "description": "CargoFlow — enterprise logistics operations platform (portfolio demonstration project)",
+  "packageManager": "pnpm@9.6.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d mysql",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @cargoflow/api db:migrate",
+    "db:seed": "pnpm --filter @cargoflow/api db:seed",
+    "db:reset": "pnpm --filter @cargoflow/api db:reset",
+    "dev": "pnpm --parallel --filter @cargoflow/api --filter @cargoflow/web dev",
+    "dev:api": "pnpm --filter @cargoflow/api dev",
+    "dev:web": "pnpm --filter @cargoflow/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm --filter @cargoflow/api test:integration",
+    "test:e2e": "pnpm --filter @cargoflow/web test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
